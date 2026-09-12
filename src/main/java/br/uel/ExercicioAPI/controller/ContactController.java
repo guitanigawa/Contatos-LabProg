@@ -1,19 +1,18 @@
 package br.uel.ExercicioAPI.controller;
 
 import br.uel.ExercicioAPI.model.Contact;
-import org.apache.coyote.Response;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import br.uel.ExercicioAPI.service.ContactService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
 @RequestMapping("/contatos")
 public class ContactController {
-    private ContactService service;
+    private final ContactService service;
 
     @Autowired
     public ContactController(ContactService service) {
@@ -23,48 +22,47 @@ public class ContactController {
     @GetMapping
     public List<Contact> listar() { return service.listar(); }
 
-    @GetMapping("/{index}")
-    public ResponseEntity<Contact> buscar(@PathVariable int index) {
-        try{
-            Contact c = service.buscar(index);
+    @GetMapping("/{id}")
+    public ResponseEntity<?> buscar(@PathVariable Long id) {
+        Contact c = service.buscar(id);
 
+        if(c != null){
             return ResponseEntity.ok(c);
-        }catch(IndexOutOfBoundsException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Contato não encontrado!");
         }
     }
 
     @PostMapping
-    public ResponseEntity<Void> adicionar(@RequestBody Contact contact){
-        try{
-            service.adicionar(contact);
+    public ResponseEntity<?> adicionar(@Valid @RequestBody Contact contact){
+        try {
+            Contact salvo = service.adicionar(contact);
 
-            return ResponseEntity.status(HttpStatus.CREATED).build();
-        }catch(IllegalArgumentException e){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            return ResponseEntity.status(HttpStatus.CREATED).body(salvo);
+        }catch(RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
-
     }
 
-    @DeleteMapping("/{index}")
-    public ResponseEntity<Void> remover(@PathVariable int index){
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> remover(@PathVariable Long id){
         try{
-            service.remover(index);
+            service.remover(id);
 
             return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        }catch(IndexOutOfBoundsException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }catch(RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 
-    @PutMapping("/{index}")
-    public ResponseEntity<Void> alterar(@RequestBody Contact contact, @PathVariable int index){
+    @PutMapping("/{id}")
+    public ResponseEntity<?> alterar(@Valid @RequestBody Contact contact, @PathVariable Long id){
         try{
-            service.atualizar(index, contact);
+            Contact atualizado = service.atualizar(id, contact);
 
-            return ResponseEntity.ok().build();
-        }catch(IndexOutOfBoundsException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.ok(atualizado);
+        }catch(RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 }

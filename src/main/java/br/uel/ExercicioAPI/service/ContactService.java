@@ -1,50 +1,59 @@
 package br.uel.ExercicioAPI.service;
 
+import br.uel.ExercicioAPI.repository.ContactRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.ArrayList;
+
 import java.util.List;
 import br.uel.ExercicioAPI.model.Contact;
-import org.thymeleaf.util.StringUtils;
 
 @Service
 public class ContactService{
-    private List<Contact> contatos = new ArrayList<>();
+    @Autowired
+    private ContactRepository contactRepository;
 
     public List<Contact> listar() {
-        return contatos;
+        return contactRepository.findAll();
     }
 
-    public Contact buscar(int index) { return contatos.get(index); }
+    public Contact buscar(Long id) {
+        return contactRepository.findById(id).orElse(null);
+    }
 
-    public void adicionar(Contact c) {
+    public Contact adicionar(Contact c) {
         if(
-                c.getNome() == null || c.getNome().isBlank()
-                || c.getTelefone() == null || c.getTelefone().isBlank()
-                || c.getEmail() == null || c.getEmail().isBlank()
-                || c.getEndereco() == null || c.getEndereco().isBlank()
-                || c.getDataNascimento() == null
+                contactRepository.existsByEmail(c.getEmail())
+                || contactRepository.existsByTelefone(c.getTelefone())
         ){
-            throw new IllegalArgumentException();
-        }else{
-            contatos.add(c);
+            throw new RuntimeException("E-mail ou telefone em uso.");
         }
+
+        return contactRepository.save(c);
     }
 
-    public void remover(int index) {
-        contatos.remove(index);
+    public void remover(Long id) {
+        if (!contactRepository.existsById(id)) {
+            throw new RuntimeException("Contato não encontrado com id: " + id);
+        }
+
+        contactRepository.deleteById(id);
     }
 
-    public void atualizar(int index, Contact c) {
-        if(
-                c.getNome() == null || c.getNome().isBlank()
-                || c.getTelefone() == null || c.getTelefone().isBlank()
-                || c.getEmail() == null || c.getEmail().isBlank()
-                || c.getEndereco() == null || c.getEndereco().isBlank()
-                || c.getDataNascimento() == null
-        ){
-            throw new IllegalArgumentException();
-        }else{
-            contatos.set(index, c);
-        }
+    public Contact atualizar(Long id, Contact c) {
+
+        return contactRepository.findById(id).map(
+                c_antigo -> {
+                    c_antigo.setNome(c.getNome());
+                    c_antigo.setTelefone(c.getTelefone());
+                    c_antigo.setEmail(c.getEmail());
+                    c_antigo.setEndereco(c.getEndereco());
+                    c_antigo.setDataNascimento(c.getDataNascimento());
+
+                    return c_antigo;
+                }
+            ).orElseThrow(
+                    () -> new RuntimeException("Contato não encontrado com id:" + id)
+        );
+
     }
 }
